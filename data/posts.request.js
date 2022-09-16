@@ -3,25 +3,27 @@ const Post = require("../models/posts.model");
 const fs = require("fs");
 
 exports.CreatePost = async (req, res, next) => {
-  console.log(req.body)
+  // console.log(req.body);
   if (req.body.photo !== "null") {
     // const url = req.protocol + "://" +  "blog.healthtime.ie";
-    const url = req.protocol + "://" + "localhost:3000";
+    // const url = req.protocol + "://" + "localhost:3000";
 
-    req.body["ImagePath"] = url + "/images/" + req.file.filename;
-    // console.log(req.body["ImagePath"]);
+    req.body["ImagePath"] = "/images/" + req.file.filename;
+  }
+
+  // console.log(req.body["ImagePath"]);
+  try {
     req.body.tags = JSON.parse(req.body.tags);
     let newPost = await new Post(req.body);
-    newPost.save(() => {
-      User.updateOne(
-        { _id: authorId },
-        { $addToSet: { posts: newPost } },
-        { new: true }
-      ).then(() => {
-        res.status(201).json({ newPost, message: "Post Added" });
-        next();
-      });
-    });
+    await newPost.save();
+    await User.updateOne(
+      { _id: req.body.authorId },
+      { $addToSet: { posts: newPost } },
+      { new: true }
+    );
+    res.status(200).send({ message: "created Succefully" });
+  } catch (e) {
+    console.log(e);
   }
 };
 
@@ -34,29 +36,38 @@ exports.GetAllPosts = async (req, res, next) => {
       .skip(pageSize * (currentPage - 1))
       .limit(pageSize);
     res.status(200).json({ Posts, count });
-    return next();
   }
   let Posts = await Post.find({ published: true }, {}, { sort: { _id: -1 } });
   res.status(200).json({ Posts, count });
-  next();
 };
 
-exports.DeletePost = (req, res, next) => {
-  Post.findById({ _id: req.params.id }).then(async (result) => {
-    let deleted = await Post.deleteOne({ _id: req.params.id });
-    let deletedFromUsers = await User.updateOne({ posts: req.params.id }, { $pullAll: { _id: req.params.id } })
-    if (!deleted) return;
-    if (!result.Imagepath) return;
-    let imagepath = result.ImagePath.split(":")[2].split("/");
-    imagepath = imagepath[1] + "/" + imagepath[2];
-    fs.unlink(imagepath, (mm) => {
-      // console.log(mm)
-    });
-    res
-      .status(200)
-      .json({ message: "The Post Deleted !", deletedId: req.params.id });
-    next();
-  });
+exports.DeletePost = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    console.log(post);
+    if (post) {
+      let deleted = await Post.findByIdAndDelete({ _id: req.params.id });
+      let deletedFromUsers = await User.updateOne(
+        { _id: deleted.authorId },
+        { $pull: { posts: req.params.id } }
+      );
+      if (post.Imagepath) {
+        let imagepath = post.ImagePath.split(":")[2].split("/");
+        imagepath = imagepath[1] + "/" + imagepath[2];
+        if (fs.existsSync(imagepath)) {
+          await fs.promises.unlink(imagepath);
+        }
+      }
+
+      res
+        .status(200)
+        .json({ message: "The Post Deleted !", deletedId: req.params.id });
+    } else {
+      res.status(404).json({ message: "Post Is not Found" });
+    }
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 exports.getPost = (req, res, next) => {
@@ -64,20 +75,27 @@ exports.getPost = (req, res, next) => {
     .select("-_id -__v")
     .then((post) => {
       if (post) {
-        res.status(200).json({ post });
-        return next();
+        User.findById(post.authorId)
+          .then((user) => {
+            res.status(200).json({ user, post });
+          })
+          .catch((e) => {
+            res.status(500).send({ message: "Server Error" });
+          });
       } else {
         res.status(404).json({ message: "Post in not found" });
-        next();
       }
+    })
+    .catch((e) => {
+      res.status(500).send({ message: "Server Error" });
     });
 };
 
 exports.UpdatePost = async (req, res, next) => {
   let ImagePath = req.body.ImagePath;
   if (req.body.photo !== "null") {
-    const url = req.protocol + "://" + req.get("host");
-    req.body["ImagePath"] = url + "/images/" + req.file.filename;
+    // const url = req.protocol + "://" + req.get("host")
+    req.body["ImagePath"] = "/images/" + req.file.filename;
   }
   req.body.tags = JSON.parse(req.body.tags);
   let updatePost = await Post.findByIdAndUpdate(
@@ -85,50 +103,37 @@ exports.UpdatePost = async (req, res, next) => {
     { $set: req.body },
     { new: true }
   );
-  //let updateUser = await User.findByIdAndUpdate({_id:req.body.authorId},{$set:{posts:}) 
+  //let updateUser = await User.findByIdAndUpdate({_id:req.body.authorId},{$set:{posts:})
   return updatePost.save((err) => {
     console.log(err);
     res.status(200).json({ updatePost, message: "Post Is Updated" });
-    next();
   });
 };
 
 exports.getUserPosts = async (req, res, next) => {
-  const Posts = [];
   const authorId = req.params.id;
-  const user = await User.findById(authorId).populate("post");
-  if (!user) {
-    return res.status(404);
-  }
+  const posts = await Post.find({ authorId });
+  // if (!user) {
+  //   return res.status(404);
+  // }
 
-  res.status(200).json(Posts);
+  res.status(200).json(posts);
 };
 
 exports.publishPost = async (req, res, next) => {
   const id = req.params.id;
   let publishState = req.body.publishState;
   publishState = !publishState;
-  let UpdatedPost = await Post.findByIdAndUpdate(
-    { _id: id },
+  const UpdatedPost = await Post.findByIdAndUpdate(
+    id,
     { $set: { published: publishState } },
     { new: true }
   );
-  UpdatedPost.save((err) => {
-    if (err) {
-      return res.status(500).json({ message: err });
-    }
-    if (!publishState) {
-      res.status(200).json({ message: "Post UnPublished !!!" });
-      return next();
-    }
-    res.status(200).json({ message: "Post Published !!!" });
-    next();
-  });
+
+  res.status(200).json({ message: "Done" });
 };
 
 exports.postsSearch = async (req, res, next) => {
   const search = req.query.q;
   console.log(search);
-
-  return next();
 };
