@@ -53,7 +53,7 @@ const UpdateUser = async (req, res, next) => {
   console.log(req.body.photo !== null);
   if (req.body.photo !== "null") {
     const url = req.protocol + "://" + req.get("host");
-    req.body["ImagePath"] = url + "/images/" + req.file.filename;
+    req.body["imagePath"] = url + "/images/" + req.file.filename;
   }
   let UpdateUser = await User.findByIdAndUpdate(
     id,

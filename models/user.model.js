@@ -3,7 +3,7 @@ const posts = require("./posts.model").schema;
 
 const userSchema = mongoose.Schema({
   email: { type: String, required: true },
-  ImagePath: { type: String },
+  imagePath: { type: String },
   specialty: { type: String, required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
