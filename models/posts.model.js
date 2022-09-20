@@ -18,7 +18,11 @@ const postShema = mongoose.Schema({
     _id: false,
   },
   category: { type: String, required: true },
-  shares: [{ date: String, num: { type: Number, default: 0 } }],
+  shares: {
+    type: [{ day: Date, num: Number }],
+    default: [],
+    _id: false,
+  },
 });
 
 module.exports = mongoose.model("Post", postShema);

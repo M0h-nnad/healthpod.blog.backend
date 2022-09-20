@@ -16,9 +16,9 @@ app.use("/images", express.static(path.join("./images")));
 app.use(HeaderSetter.setHeader);
 
 // app.get("/d", (req, res) => {
- 
+
 // });
-// Post.updateMany({}, { $set: { views: [] } }).then((val) => console.log(val));
+// Post.updateMany({}, { shares: [] }).then((val) => console.log(val));
 
 app.use("/api", PostRoutes);
 

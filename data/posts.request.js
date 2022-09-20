@@ -182,8 +182,9 @@ exports.postsSearch = async (req, res, next) => {
 exports.increaseShare = async (req, res, next) => {
   const id = req.params.id;
   try {
-    const day = new Date();
-    const today = day.toDateString();
+    const dayWithTime = new Date();
+    const textDate = dayWithTime.toDateString();
+    const today = new Date(textDate);
     const selectedPost = await Post.findOne({
       _id: id,
       "shares.day": today,
@@ -210,13 +211,17 @@ exports.getDashboardData = async (req, res, next) => {
   const id = req.user.id;
   console.log(id);
   Post.aggregate([
-    { $unwind: { path: "$views" } },
-    { $unwind: { path: "$views.num" } },
     {
       $match: {
         authorId: new mongoose.Types.ObjectId(id),
       },
     },
+    { $unwind: { path: "$views" } },
+    { $unwind: { path: "$shares", preserveNullAndEmptyArrays: true } },
+
+    { $sort: { "views.day": 1 } },
+    { $sort: { "shares.day": 1 } },
+
     {
       $group: {
         _id: "",
@@ -224,13 +229,6 @@ exports.getDashboardData = async (req, res, next) => {
           $push: "$views",
         },
         shares: { $push: "$shares" },
-        // numOfViews: {
-        //   $reduce: {
-        //     input: "$views.num",
-        //     initialValue: 0,
-        //     in: { $add: ["$$value", "$$this"] },
-        //   },
-        // },
         numOfViews: {
           $sum: { $sum: "$views.num" },
         },
@@ -239,9 +237,6 @@ exports.getDashboardData = async (req, res, next) => {
         },
         // authorId: { $first: "$authorId" },
       },
-    },
-    {
-      $addFields: {},
     },
   ]).then((val) => {
     res.json(...val);
