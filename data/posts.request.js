@@ -148,16 +148,17 @@ exports.getUserPosts = async (req, res, next) => {
 	const pageSize = +req.query.pageSize;
 	const currentPage = +req.query.page;
 	let count = await Post.countDocuments({ authorId });
-	const posts = await Post.find({ authorId }).skip(pageSize * (currentPage - 1))
-  .limit(pageSize)
+	const posts = await Post.find({ authorId })
+		.skip(pageSize * (currentPage - 1))
+		.limit(pageSize);
 
-    console.log(posts.length);
-    console.log(count);
+	console.log(posts.length);
+	console.log(count);
 	// if (!user) {
 	//   return res.status(404);
 	// }
 
-	res.status(200).send({posts,count});
+	res.status(200).send({ posts, count });
 };
 
 exports.publishPost = async (req, res, next) => {
@@ -174,8 +175,11 @@ exports.publishPost = async (req, res, next) => {
 };
 
 exports.postsSearch = async (req, res, next) => {
-	const search = req.query.q;
+	const search = req.query.search;
 	console.log(search);
+	const posts = await Post.find({ $text: { $search: search } });
+
+	res.status(200).send({ posts });
 };
 
 exports.increaseShare = async (req, res, next) => {
