@@ -5,13 +5,13 @@ const checkAuth = require('../middlerware/check-auth');
 const storage = require('../middlerware/multer.storage');
 const multer = require('multer');
 
-router.get('/posts', PostRequestModule.GetAllPosts);
-
 router.get('/posts/dashboard', checkAuth, PostRequestModule.getDashboardData);
 router.get('/posts/search/', PostRequestModule.postsSearch);
-
+router.get('/posts/header', PostRequestModule.getHeaderData);
+router.get('/posts', PostRequestModule.GetAllPosts);
 router.get('/posts/user/:id', checkAuth, PostRequestModule.getUserPosts);
 router.get('/posts/:id', PostRequestModule.getPost);
+
 
 router.post(
 	'/posts',

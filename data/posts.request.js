@@ -239,3 +239,10 @@ exports.getDashboardData = async (req, res, next) => {
 		res.json(...val);
 	});
 };
+
+exports.getHeaderData = async (req, res, next) => {
+	const popularPost = await Post.find({}).limit(5).sort({ 'views.num': -1 }).select({ content: 0 });
+	const recentPost = await Post.find({}).limit(4).sort({ createdAt: -1 }).select({ content: 0 });
+
+	res.send({ popularPost, recentPost });
+};

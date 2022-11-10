@@ -10,7 +10,6 @@ const postShema = mongoose.Schema(
 		imagePath: { type: String },
 		title: { type: String },
 		content: { type: String },
-		date: { type: Date, default: Date.now },
 		// comments: [Comments],
 		published: { type: Boolean, default: false },
 		views: {
@@ -25,7 +24,7 @@ const postShema = mongoose.Schema(
 			_id: false,
 		},
 	},
-	{ timestamp: true },
+	{ timestamps: true },
 );
 
 postShema.index({ title: 'text', content: 'text' });
